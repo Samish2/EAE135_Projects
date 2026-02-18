@@ -142,20 +142,24 @@ ksi_to_MPa = 6.89476
 
 #starting t+5 seconds
 T_max_1 = 726 #kN
-D_outer = 128 #cm
-D_inner = 118 #cm
+D_outer = 128 / 100 #cm -> m
+D_inner = 118 / 100 #cm -> m
 
 t_maxQ = 36 #seconds
 
 #Table 1 Input Data
-AOA = 20 #degrees
-l_beam = 5*D_outer # cm
-t_layer = (1/8) * (50) #mm
-l_cp_to_cg = D_inner #cm
+AOA = 20 #degree
+l_rocket = 5*D_outer #m
+t_layer = (1/8) * (50) / 1000 #m
+alpha = degToRad(AOA)
+l_cp_to_cg = D_inner #m
 F_axial_O = 600 #kN
-W_rocket = 8500 #kg
+W_rocket = 8500 * 9.8 / 1000 #kg to #kN
 Lift = 1400 #kN
 safety_factor = 1.25
+
+#Problem Statement
+x_1 = np.linspace(0,l_rocket,100)
 
 #Material Properties
 #AS4/epoxy
@@ -188,10 +192,21 @@ Q_bars=[]
 
 Q_bars = black_Aluminum.Q_bar_array()
 print("Q_bars:")
-for i in range(len(Q_bars)):
-    print(Q_bars[i])
+
+#for i in range(len(Q_bars)):
+#    print(Q_bars[i])
+
+#Bending
+
+#Integrate Moment Equation Once
+print("L_rocket: " + str(l_rocket) + "\nL_rocket^2: " + str(l_rocket**2))
+c_3 = -((1/2)*(Lift*math.cos(alpha)-W_rocket)*l_rocket**2 + W_rocket*D_outer*l_rocket)
+
+#Integrate Moment Equation Twice
+c_4= -((1/6)*(Lift*math.cos(alpha))*l_rocket**3 + (1/2)*W_rocket*D_outer*l_rocket**2 + c_3*l_rocket)
 
 
+#u2_x1 = (1/H33_c)*(1/6(Lift*math.cos(alpha)*(x_1)**3)+(1/2)*(W_rocket)*(D_outer)*(x_1)**2+c_3*x_1+c_4)
 
 
 
