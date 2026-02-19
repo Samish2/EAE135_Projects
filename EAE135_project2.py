@@ -77,8 +77,9 @@ class laminate:
         return Q
     
     def Q_bar(self,degrees):
-        print("Start of Q_bar calculations")
+        #print("Start of Q_bar calculations")
         R = np.array([[1,0,0],[0,1,0],[0,0,2]])
+        #print("R_matrix: \n"+str(R))
         T=orientation_Transform(degrees)
         Q=self.Q_Matrix()
 
@@ -86,19 +87,28 @@ class laminate:
         R_inv = np.linalg.inv(R)
 
         #Q_bar = T^-1 * Q * R * T * R^-1
-        Q_bar = T_inv * Q * R * T * R_inv
-        print("T = \n" + str(T))
-        print("R = \n" + str(R))
-        print("Q_bar = \n" + str(Q_bar))
+        Q_bar = T_inv @ Q @ R @ T @ R_inv
+        #print("T = \n" + str(T))
+        #print("R = \n" + str(R))
+        #print("Q_bar = \n" + str(Q_bar))
         return Q_bar
     
     def Q_bar_array(self):
+        Q_bars = []
+        #print("Q_bars initial: " + str(Q_bars))
         for i in range(len(layup)):
             #takes the sheet orientations from layup array
             #and calculates the Q_bar for each sheet sequentially
             #stores these matrices in Q_bars
-            print("index: "+ str(i))
+            #print("index: "+ str(i))
+            
+            
+            #print("Q_bar "+ str(i) + " :\n"+str(self.Q_bar(layup[i])))
             Q_bars.append(self.Q_bar(layup[i]))
+            #print("printing Q_bars")
+            #for Q_bar in Q_bars:
+                #print("\n" + str(Q_bar))
+        
         return Q_bars
       
 
@@ -124,18 +134,6 @@ class Material:
             self.omega_transverse_C = omega_transverse_C
     
     
-                    
-
-
-
-
-#class Section:
-    #def __init__(self,material,):
-    
-
-    #def transport_term(self):
-         
-
 
 #Conversion Factors
 ksi_to_MPa = 6.89476
@@ -191,10 +189,25 @@ black_Aluminum.Q_bar(45)
 Q_bars=[]
 
 Q_bars = black_Aluminum.Q_bar_array()
-print("Q_bars:")
+print("Black Aluminum Q_bars: ")
+S=[]
+E_x1x1 = []
+print("S matrix (should be inverse of Q): ")
+for Q in Q_bars:
+    S_bar = np.linalg.inv(Q)
+    S.append(S_bar)
+    print(S_bar)
+    E_x1x1.append(1/(S_bar[0,0]))
+print("S_bar should be inverse of Q_bar")
+print("Ex1x1: "+str(E_x1x1) + " GPa")
+    
 
-#for i in range(len(Q_bars)):
-#    print(Q_bars[i])
+
+
+
+
+
+
 
 #Bending
 
