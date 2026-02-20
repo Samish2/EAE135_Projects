@@ -12,6 +12,24 @@ def reverseArray(array):
         #print(newArray)
     return newArray
 
+def bendingStiffness(E_array,r_inner,r_outer,numLayers):
+    t_p = (r_outer-r_inner)/numLayers
+    t_p = 0.00625 
+
+    Radii = [0, r_inner] #r_0 and r_1
+    # Add 8 composite layers (r2 to r9)
+    for i in range(numLayers):
+        Radii.append(Radii[i+1] + t_p)
+
+    H33ci = np.zeros(numLayers+1)
+
+    for i in range(9):
+        H33ci[i] = E_array[i] * (math.pi / 4) * (Radii[i+1]**4 - Radii[i]**4)
+
+    #total bending stiffness
+    H33c_total = np.sum(H33ci)
+
+    return (H33c_total)
 
 def symmetric_layup(layupArray):
     #I don't think this differentiates between the layups that have an
@@ -29,6 +47,7 @@ def symmetric_layup(layupArray):
         for i in range(numElements):
             laminate.append(layupReverse[i])
         print("Full laminate array: " + str(laminate))
+    return(laminate)
 
 def degToRad(degrees):
     radians = degrees * math.pi/180
@@ -49,7 +68,7 @@ def orientation_Transform(degrees):
 
     T = np.array([[T_1_1,T_1_2,T_1_3],[T_2_1,T_2_2,T_2_3],[T_3_1,T_3_2,T_3_3]])
 
-    print("Transformation matrix for "+str(degrees)+" degrees: \n" + str(T))
+    #print("Transformation matrix for "+str(degrees)+" degrees: \n" + str(T))
     return T
 
     
@@ -100,7 +119,6 @@ class laminate:
             #takes the sheet orientations from layup array
             #and calculates the Q_bar for each sheet sequentially
             #stores these matrices in Q_bars
-            #print("index: "+ str(i))
             
             
             #print("Q_bar "+ str(i) + " :\n"+str(self.Q_bar(layup[i])))
@@ -157,7 +175,7 @@ Lift = 1400 #kN
 safety_factor = 1.25
 
 #Problem Statement
-x_1 = np.linspace(0,l_rocket,100)
+x_1 = np.linspace(0,l_rocket,10)
 
 #Material Properties
 #AS4/epoxy
@@ -172,6 +190,8 @@ c_omega_axial_T = 2137 #MPa
 c_omega_axial_C = -184 * ksi_to_MPa #MPa
 c_omega_transverse_T = 53.4 #MPa
 c_omega_transverse_C = -24.4 * ksi_to_MPa #MPa
+
+E_HTPB = 9.036 * 10**(-3) # GPa
 
 carbon_epoxy=Material(c_rho,c_E1,c_E2,c_v_12,c_v_23,c_G_12,c_G_23,
                 c_omega_axial_T,c_omega_axial_C,
@@ -189,27 +209,25 @@ black_Aluminum.Q_bar(45)
 Q_bars=[]
 
 Q_bars = black_Aluminum.Q_bar_array()
-print("Black Aluminum Q_bars: ")
+#print("Black Aluminum Q_bars: ")
 S=[]
-E_x1x1 = []
-print("S matrix (should be inverse of Q): ")
+
+E_x1x1 = [E_HTPB] #GPa
+#print("S matrix (should be inverse of Q): ")
 for Q in Q_bars:
     S_bar = np.linalg.inv(Q)
     S.append(S_bar)
     print(S_bar)
     E_x1x1.append(1/(S_bar[0,0]))
-print("S_bar should be inverse of Q_bar")
-print("Ex1x1: "+str(E_x1x1) + " GPa")
-    
+#print("S_bar should be inverse of Q_bar")
+#print("Ex1x1: "+str(E_x1x1) + " GPa")
 
-
-
-
-
-
+H_33c = bendingStiffness(E_x1x1,D_inner/2,D_outer/2,len(black_Aluminum.fullLayupArray)) #check units here
+print(H_33c)
 
 
 #Bending
+#Need unit checks for the rest of this
 
 #Integrate Moment Equation Once
 print("L_rocket: " + str(l_rocket) + "\nL_rocket^2: " + str(l_rocket**2))
@@ -218,8 +236,18 @@ c_3 = -((1/2)*(Lift*math.cos(alpha)-W_rocket)*l_rocket**2 + W_rocket*D_outer*l_r
 #Integrate Moment Equation Twice
 c_4= -((1/6)*(Lift*math.cos(alpha))*l_rocket**3 + (1/2)*W_rocket*D_outer*l_rocket**2 + c_3*l_rocket)
 
+print(x_1)
+u2_x1 = (1/((10**3)*H_33c))*((1/6)*(Lift*math.cos(alpha)*(x_1)**3)+(1/2)*(W_rocket)*(D_outer)*(x_1)**2+c_3*x_1+c_4) #micrometers
 
-#u2_x1 = (1/H33_c)*(1/6(Lift*math.cos(alpha)*(x_1)**3)+(1/2)*(W_rocket)*(D_outer)*(x_1)**2+c_3*x_1+c_4)
+print(u2_x1)
+
+plt.figure(figsize=(16,9))
+plt.title("Vertical Displacement of Beam")
+plt.xlabel("x_beam (m)")
+plt.ylabel("u_2 (um)")
+plt.plot(x_1,u2_x1,marker='o',markersize=10,color='blue')
+plt.grid()
+plt.show()
 
 
 
