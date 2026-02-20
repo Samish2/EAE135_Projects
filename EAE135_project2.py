@@ -69,17 +69,17 @@ def bendingStiffness(E_array,r_inner,r_outer,numLayers):
 
     
     #total bending stiffness
-    H33c_total = np.sum(H33ci)
+    H33c_total = np.sum(H33ci) #GN * m^2
     return (H33c_total,S_tot,Area)
 
-def Axial_Stress_From_Axial_Load(E_array,numLayers,F_axial,S,Area):
+def Axial_Stress_From_Axial_Load(E_array,numLayers,F_axial,S,Area):#returns omega_1_axial in GPa
     #print("F_axial = "+str(F_axial)+" kN")
     omega_1_axial = np.zeros(numLayers+1)
     for i in range(numLayers+1):
         omega_1_axial[i] = E_array[i]*F_axial/S #kPa
         #print("E = "+str(round(E_array[i],3))+"      omega_1_axial = "+str(round(omega_1_axial[i],3)) + " kPa     Area: "+str(round(Area[i],3))+ " m^2      Force: "
         #      +str(omega_1_axial[i]*Area[i])+ " kN")
-    return (omega_1_axial) #kPa
+    return (omega_1_axial/(10**6)) #GPa
 
 def Axial_Stress_From_Bending(Mom_Array,Ex1x1_array,H33_c,r_inner,r_outer,numLayers):
     Ex1x1_array=mirrorArray(Ex1x1_array)
@@ -112,11 +112,11 @@ def Axial_Stress_From_Bending(Mom_Array,Ex1x1_array,H33_c,r_inner,r_outer,numLay
     print("length of r_array: "+str(len(r_array))+"     length of E_radial_array: "+str(len(E_radial_array)))
     for i in range(len(r_array)-1):
         #print("r: "+str(r_array[i])+ "      E: "+str(E_radial_array[i])+ "      index: " + str(i))
-        omega_1_section = -E_radial_array[i] * r_array[i]*Mom_Array[len(Mom_Array)-1]/H33_c
-        omega_1[i] = omega_1_section
+        omega_1_section = -E_radial_array[i] * r_array[i]*Mom_Array[len(Mom_Array)-1]/H33_c 
+        omega_1[i] = omega_1_section #kPa
     
     #adds mirror 
-    return (omega_1,r_array,Radii)
+    return (omega_1/(10**6),r_array,Radii) #returns omega_bend in GPa
 
 def layer_values_to_radius(layer_array,r_outer,r_inner,numLayers,needMirrored):
     t_p = (r_outer-r_inner)/numLayers #layer thickness
@@ -147,28 +147,6 @@ def layer_values_to_radius(layer_array,r_outer,r_inner,numLayers,needMirrored):
     return(layer_array_new)
 
 
-# def Combine_Stresses(Radii , omega_1_bending, r_array, omega_1_axial):
-#     #Radii is the full list of radii (includes negative)
-#     #omega_1_bending has all of the stresses for the entire cross section
-#     #r_array has all the radius values for the whole cross section
-#     #omega_1_axial has values for each layer
-
-#     print("\nstarting combined stresses\n")
-#     print(r_array)
-#     E_radial_array=[0]
-#     total_omega_1=[]
-#     #Ex1x1_array.append(Ex1x1_array[len(Ex1x1_array)-1])
-#     for j in range(len(Radii)-1):
-#         for i in range(len(r_array)-1):
-#             #makes sure that we're in the correct range
-#             if (r_array[i] < Radii[j+1] and r_array[i] >= Radii[j]):
-#                 #append an array to have the needed E value for that layer
-#                 total_omega_1.append(omega_1_axial[j] + omega_1_bending[i])
-#             #print("r: "+str(round(r_array[i],4))+ " m  axial: "+str(round(omega_1_axial[j],3))+ "GPa   bending: "+str(round(omega_1_bending[i],1))+" MPa")
-#             #print("E_value"+" index: "+str(i))
-#     layer_array.append(len(Radii)-1)
-#     print("length of r_array (combine stresses): "+str(len(r_array))+"     length of omega array: "+str(len(total_omega_1)))
-#     return (total_omega_1)
 
 
 
@@ -342,6 +320,8 @@ carbon_epoxy=Material(c_rho,c_E1,c_E2,c_v_12,c_v_23,c_G_12,c_G_23,
 layup = [0,45,-45,90]
 numLayers = 8
 
+
+
 #symmetric_layup(layup)
 
 black_Aluminum=laminate(carbon_epoxy,layup)
@@ -360,13 +340,14 @@ E_x1x1 = [E_HTPB] #GPa
 for Q in Q_bars:
     S_bar = np.linalg.inv(Q)
     S.append(S_bar)
-    print(S_bar)
+    #print(S_bar)
     E_x1x1.append(1/(S_bar[0,0]))
 #print("S_bar should be inverse of Q_bar")
 print("Ex1x1: "+str(E_x1x1) + " GPa")
 
+#H33_c in kPa
 (H_33c, S_tot,AreaArray) = bendingStiffness(E_x1x1,D_inner/2,D_outer/2,len(black_Aluminum.fullLayupArray)) #check units here
-print("H33_c: "+ str(H_33c))
+print("H33_c: "+ str(H_33c) + "GN*m^2")
 print("S = "+str(S_tot))
 
 
@@ -401,21 +382,20 @@ for x in x_1:
 #Axial Stress
 #S = sum(Ei * Ai)
 
-#omega axial in kPa
+#omega axial in GPa
 omega_1_axial_layer = Axial_Stress_From_Axial_Load(E_x1x1,len(black_Aluminum.fullLayupArray),((Lift*math.sin(degToRad(AOA)))-F_axial_O),S_tot,AreaArray)
 omega_1_axial_radial = layer_values_to_radius(omega_1_axial_layer,D_outer/2,D_inner/2,numLayers,1)
+for i in omega_1_axial_layer:
+    print (i)
 
 
-#Axial bending stress
+#Axial bending stress in GPa
 (omega_1_bend, r_array,layer_array) = Axial_Stress_From_Bending(Mom_Array,E_x1x1,H_33c,D_inner/2,D_outer/2,numLayers)
 
 
-
-
-
-# omega_1_total = omega_1_axial_radial + omega_1_bend
-# for i in range(len(omega_1_axial_radial)-1):
-#     print("axial stress: "+str(omega_1_axial_radial)+ " GPa     bending stress"+ str(omega_1_bend)+ " GPa       total stress: " + str(omega_1_total) + " GPa")
+omega_1_total = omega_1_axial_radial + omega_1_bend
+#for i in range(len(omega_1_axial_radial)-1):
+#    print("axial stress: "+str(omega_1_axial_radial[i])+ " GPa     bending stress "+ str(omega_1_bend[i])+ " GPa       total stress: " + str(omega_1_total[i]) + " GPa")
 
 fig, ax1 = plt.subplots()
 
@@ -432,25 +412,25 @@ ax1.tick_params(axis='y', labelcolor=color)
 ax2 = ax1.twinx()
 
 color = 'tab:red'
-ax2.set_ylabel("Moment (I dont know the units are)")
+ax2.set_ylabel("Moment (kN*m)")
 ax2.plot(x_1,Mom_Array,marker='o',markersize=5,color='red')
 ax2.tick_params(axis='y', labelcolor=color)
 plt.grid()
 plt.show()
 
 plt.figure(figsize=(16,9))
-plt.title("Axial Stress versus radius at Critical Cross Section")
-plt.xlabel("Axial Stress")
-plt.ylabel("radius")
-plt.plot(omega_1_bend,r_array)
+plt.title("Total Axial Stress versus radius at Critical Cross Section")
+plt.xlabel("Axial Stress (GPa)")
+plt.ylabel("radius (m)")
+plt.plot(omega_1_total,r_array)
 plt.grid()
 plt.show()
 
 plt.figure(figsize=(16,9))
 plt.title("Axial Stress versus radius at Critical Cross Section (Zoomed)")
-plt.xlabel("Axial Stress")
-plt.ylabel("radius")
+plt.xlabel("Axial Stress (GPa)")
+plt.ylabel("radius (m)")
 plt.ylim(0.5,0.65)
-plt.plot(omega_1_bend,r_array)
+plt.plot(omega_1_total,r_array)
 plt.grid()
 plt.show()
