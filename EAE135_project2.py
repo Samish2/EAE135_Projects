@@ -62,7 +62,7 @@ def Axial_Stress_From_Bending(Mom_Array,Ex1x1_array,H33_c,r_inner,r_outer,numLay
 
     for i in range(len(r_array)-1):
         print("r: "+str(r_array[i])+ "      E: "+str(E_radial_array[i])+ "      index: " + str(i))
-        omega_1_section = -E_radial_array[i] * r_array[i]*Mom_Array/H33_c
+        omega_1_section = -E_radial_array[i] * r_array[i]*Mom_Array[i]/H33_c
         omega_1.append(omega_1_section)
     
     #return (omega_1,r_array)
@@ -219,7 +219,7 @@ Lift = 1400 #kN
 safety_factor = 1.25
 
 #Problem Statement
-x_1 = np.linspace(0,l_rocket,10)
+x_1 = np.linspace(0,l_rocket,100)
 
 #Material Properties
 #AS4/epoxy
@@ -284,16 +284,42 @@ c_4= -((1/6)*(Lift*math.cos(alpha))*l_rocket**3 + (1/2)*W_rocket*D_outer*l_rocke
 u2_x1 = (1/((10**3)*H_33c))*((1/6)*(Lift*math.cos(alpha)*(x_1)**3)+(1/2)*(W_rocket)*(D_outer)*(x_1)**2+c_3*x_1+c_4) #micrometers
 
 
+Mom_Array = [] #Moments
+for x in x_1:
+    if x < D_outer:
+        Mom_near_end = Lift*math.cos(degToRad(AOA)) * x
+        Mom_Array.append(Mom_near_end)
+        print("X = "+ str(x) + "      Moment: "+str(Mom_near_end))
+    else:
+        Mom_near_free = Lift*math.cos(degToRad(AOA)) * x - W_rocket*(x-D_outer)
+        Mom_Array.append(Mom_near_free)
+        print("X = "+ str(x) + "      Moment: "+str(Mom_near_free))
+    
+
+
 
 #Axial bending stress
 
-Axial_Stress_From_Bending(c_4,E_x1x1,H_33c,D_inner/2,D_outer/2,8)
+Axial_Stress_From_Bending(Mom_Array,E_x1x1,H_33c,D_inner/2,D_outer/2,8)
 
-plt.figure(figsize=(16,9))
-plt.title("Vertical Displacement of Beam")
-plt.xlabel("x_beam (m)")
-plt.ylabel("u_2 (um)")
-plt.plot(x_1,u2_x1,marker='o',markersize=10,color='blue')
+fig, ax1 = plt.subplots()
+
+color = 'tab:blue'
+#plt.figure(figsize=(16,9))
+#ax1.title("Vertical Displacement of Beam")
+ax1.set_xlabel("x_beam (m)")
+ax1.set_ylabel("u_2 (um)")
+ax1.plot(x_1,u2_x1,marker='o',markersize=10,color='blue')
+ax1.tick_params(axis='y', labelcolor=color)
+
+ax2 = ax1.twinx()
+
+color = 'tab:red'
+ax2.set_ylabel("Moment (I dont know the units are)")
+ax2.plot(x_1,Mom_Array,marker='o',markersize=5,color='red')
+ax2.tick_params(axis='y', labelcolor=color)
+
+
 plt.grid()
 plt.show()
 
