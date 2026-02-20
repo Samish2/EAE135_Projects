@@ -5,11 +5,38 @@ import math
 def reverseArray(array):
     newArray = []
     numElements = len(array)
-    print("number of array elements: " + str(numElements))
+    #print("number of array elements: " + str(numElements))
     #appends the reverse of the original array to an empty array
     for i in range((numElements-1),-1,-1):
         newArray.append(array[i])
         #print(newArray)
+    return newArray
+
+def mirrorArray(array):
+    newArray = []
+    numElements = len(array)
+    #print("number of array elements: " + str(numElements))
+    #appends the reverse of the original array to an empty array
+    for i in range((numElements-1),-1,-1):
+        newArray.append(array[i])
+        #print(newArray)
+    normal_Array = array
+    for values in normal_Array:
+        newArray.append(values)
+    return newArray
+
+def reflectArray(array):
+    newArray = []
+    numElements = len(array)
+    #print("number of array elements: " + str(numElements))
+    #appends the reverse of the original array to an empty array
+    for i in range((numElements-1),0,-1):
+        newArray.append(-array[i])
+        #print(newArray) 
+    normal_Array = array
+    for values in normal_Array:
+        #print(values)
+        newArray.append(values)
     return newArray
 
 def bendingStiffness(E_array,r_inner,r_outer,numLayers):
@@ -32,45 +59,45 @@ def bendingStiffness(E_array,r_inner,r_outer,numLayers):
     return (H33c_total)
 
 def Axial_Stress_From_Bending(Mom_Array,Ex1x1_array,H33_c,r_inner,r_outer,numLayers):
-
-    
+    print("Ex1x1 array: " +str(Ex1x1_array))
+    Ex1x1_array=mirrorArray(Ex1x1_array)
+    print("Ex1x1 array (mirrored): " + str(Ex1x1_array))
     t_p = (r_outer-r_inner)/numLayers
     #t_p = 0.00625 
     print("t_p = "+ str(t_p))
 
-    r_array = np.linspace(0.5,r_outer,len(Mom_Array))
-
+    r_array = np.linspace(-r_outer,r_outer,len(Mom_Array))
 
     Radii = [0, r_inner] #r_0 and r_1
     # Add 8 composite layers (r2 to r9)
     for i in range(numLayers):
         Radii.append(Radii[i+1] + t_p)
     print("Radii: "+str(Radii))
-    E_radial_array=[]
+    Radii = reflectArray(Radii)
+    print("Radii (reflected): " + str(Radii))
+    E_radial_array=[0]
+    #Ex1x1_array.append(Ex1x1_array[len(Ex1x1_array)-1])
 
     for j in range(len(Radii)-1):
         for i in range(len(r_array)-1):
             #makes sure that we're in the correct range
-            if (r_array[i] <= Radii[j+1] and r_array[i] >= Radii[j]):
+            if (r_array[i] < Radii[j+1] and r_array[i] >= Radii[j]):
                 #append an array to have the needed E value for that layer
+                print(i)
                 E_radial_array.append(Ex1x1_array[j])
             #print("r: "+str(r_array[i])+ "  E: "+str(E_radial_array[i]))
             #print("E_value"+" index: "+str(i))
-    #E_radial_array.append(Ex1x1_array[len(Ex1x1_array)-1])
+    E_radial_array.append(Ex1x1_array[len(Ex1x1_array)-1])
 
-    omega_1 = []
-
+    omega_1 = np.zeros(len(r_array))
+    print("length of r_array: "+str(len(r_array))+"     length of E_radial_array: "+str(len(E_radial_array)))
     for i in range(len(r_array)-1):
-        print("r: "+str(r_array[i])+ "      E: "+str(E_radial_array[i])+ "      index: " + str(i))
-        omega_1_section = -E_radial_array[i] * r_array[i]*Mom_Array[i]/H33_c
-        omega_1.append(omega_1_section)
+        #print("r: "+str(r_array[i])+ "      E: "+str(E_radial_array[i])+ "      index: " + str(i))
+        omega_1_section = -E_radial_array[i] * r_array[i]*Mom_Array[len(Mom_Array)-1]/H33_c
+        omega_1[i] = omega_1_section
     
-    #return (omega_1,r_array)
-
-
-    
-    
-
+    #adds mirror 
+    return (omega_1,r_array)
 
 
 
@@ -219,7 +246,7 @@ Lift = 1400 #kN
 safety_factor = 1.25
 
 #Problem Statement
-x_1 = np.linspace(0,l_rocket,100)
+x_1 = np.linspace(0,l_rocket,1000)
 
 #Material Properties
 #AS4/epoxy
@@ -267,7 +294,7 @@ for Q in Q_bars:
 print("Ex1x1: "+str(E_x1x1) + " GPa")
 
 H_33c = bendingStiffness(E_x1x1,D_inner/2,D_outer/2,len(black_Aluminum.fullLayupArray)) #check units here
-print(H_33c)
+print("H33_c: "+ str(H_33c))
 
 
 #Bending
@@ -280,6 +307,8 @@ c_3 = -((1/2)*(Lift*math.cos(alpha)-W_rocket)*l_rocket**2 + W_rocket*D_outer*l_r
 #Integrate Moment Equation Twice
 c_4= -((1/6)*(Lift*math.cos(alpha))*l_rocket**3 + (1/2)*W_rocket*D_outer*l_rocket**2 + c_3*l_rocket)
 
+print("c_3 = " + str(c_3)+ "\nc_4 = "+str(c_4))
+
 #plug into displacement
 u2_x1 = (1/((10**3)*H_33c))*((1/6)*(Lift*math.cos(alpha)*(x_1)**3)+(1/2)*(W_rocket)*(D_outer)*(x_1)**2+c_3*x_1+c_4) #micrometers
 
@@ -289,18 +318,18 @@ for x in x_1:
     if x < D_outer:
         Mom_near_end = Lift*math.cos(degToRad(AOA)) * x
         Mom_Array.append(Mom_near_end)
-        print("X = "+ str(x) + "      Moment: "+str(Mom_near_end))
+        #print("X = "+ str(x) + "      Moment: "+str(Mom_near_end))
     else:
         Mom_near_free = Lift*math.cos(degToRad(AOA)) * x - W_rocket*(x-D_outer)
         Mom_Array.append(Mom_near_free)
-        print("X = "+ str(x) + "      Moment: "+str(Mom_near_free))
+        #print("X = "+ str(x) + "      Moment: "+str(Mom_near_free))
     
 
 
 
 #Axial bending stress
 
-Axial_Stress_From_Bending(Mom_Array,E_x1x1,H_33c,D_inner/2,D_outer/2,8)
+(omega_1, r_array) = Axial_Stress_From_Bending(Mom_Array,E_x1x1,H_33c,D_inner/2,D_outer/2,8)
 
 fig, ax1 = plt.subplots()
 
@@ -318,10 +347,14 @@ color = 'tab:red'
 ax2.set_ylabel("Moment (I dont know the units are)")
 ax2.plot(x_1,Mom_Array,marker='o',markersize=5,color='red')
 ax2.tick_params(axis='y', labelcolor=color)
-
-
 plt.grid()
 plt.show()
 
-
+plt.figure(figsize=(16,9))
+plt.title("Axial Stress versus radius at Critical Cross Section")
+plt.xlabel("Axial Stress")
+plt.ylabel("radius")
+plt.plot(omega_1,r_array)
+plt.grid()
+plt.show()
 
