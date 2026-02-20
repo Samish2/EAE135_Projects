@@ -409,12 +409,16 @@ omega_1_total = omega_1_axial_radial + omega_1_bend
 fig, ax1 = plt.subplots()
 
 strengths_array = []
+strengths_array_SF = []
 for i in range(len(r_array)-1):
     if (r_array[i]<=0):
         strengths_array.append(t_strengths[i])
+        strengths_array_SF.append(t_strengths[i]/safety_factor)
     else:
         strengths_array.append(c_strengths[i])
+        strengths_array_SF.append(c_strengths[i]/safety_factor)
 strengths_array.append(c_strengths[len(c_strengths)-1])
+strengths_array_SF.append(c_strengths[len(c_strengths)-1]/safety_factor)
 print("r_array length: "+str(len(r_array))+ "   strengths array length: " + str(len(strengths_array)))
 
 color = 'tab:blue'
@@ -438,8 +442,10 @@ plt.figure(figsize=(16,9))
 plt.title("Total Axial Stress versus radius at Critical Cross Section")
 plt.xlabel("Axial Stress (GPa)")
 plt.ylabel("radius (m)")
-plt.plot(omega_1_total,r_array)
-plt.plot(strengths_array,r_array)
+plt.plot(omega_1_total,r_array, label="Experienced Load")
+plt.plot(strengths_array,r_array, label="Material Strength")
+plt.plot(strengths_array_SF,r_array, label="Material Strength (With 1.25 Safety Factor)")
+plt.legend()
 plt.ylim(-0.64,0.64)
 plt.grid()
 plt.show()
@@ -449,6 +455,20 @@ plt.title("Axial Stress versus radius at Critical Cross Section (Zoomed)")
 plt.xlabel("Axial Stress (GPa)")
 plt.ylabel("radius (m)")
 plt.ylim(0.5,0.64)
-plt.plot(omega_1_total,r_array)
+plt.plot(omega_1_total,r_array, label="Experienced Load")
+plt.plot(strengths_array,r_array, label="Material Strength")
+plt.plot(strengths_array_SF,r_array, label="Material Strength (With 1.25 Safety Factor)")
+plt.legend()
 plt.grid()
 plt.show()
+
+
+
+#Will the material fail?
+fail=False
+for i in range(len(r_array)-1):
+    if (abs(omega_1_total[i])>=abs(strengths_array_SF[i])):
+        fail=True
+        print("radius: "+str(r_array[i])+"  axial load: "+str(omega_1_axial_radial[i])+ "   strength: "+str(strengths_array_SF[i]))
+
+print (fail)
