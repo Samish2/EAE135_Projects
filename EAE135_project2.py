@@ -23,13 +23,57 @@ def bendingStiffness(E_array,r_inner,r_outer,numLayers):
 
     H33ci = np.zeros(numLayers+1)
 
-    for i in range(9):
+    for i in range(numLayers+1):
         H33ci[i] = E_array[i] * (math.pi / 4) * (Radii[i+1]**4 - Radii[i]**4)
-
+    
     #total bending stiffness
     H33c_total = np.sum(H33ci)
 
     return (H33c_total)
+
+def Axial_Stress_From_Bending(Mom_Array,Ex1x1_array,H33_c,r_inner,r_outer,numLayers):
+
+    
+    t_p = (r_outer-r_inner)/numLayers
+    #t_p = 0.00625 
+    print("t_p = "+ str(t_p))
+
+    r_array = np.linspace(0.5,r_outer,len(Mom_Array))
+
+
+    Radii = [0, r_inner] #r_0 and r_1
+    # Add 8 composite layers (r2 to r9)
+    for i in range(numLayers):
+        Radii.append(Radii[i+1] + t_p)
+    print("Radii: "+str(Radii))
+    E_radial_array=[]
+
+    for j in range(len(Radii)-1):
+        for i in range(len(r_array)-1):
+            #makes sure that we're in the correct range
+            if (r_array[i] <= Radii[j+1] and r_array[i] >= Radii[j]):
+                #append an array to have the needed E value for that layer
+                E_radial_array.append(Ex1x1_array[j])
+            #print("r: "+str(r_array[i])+ "  E: "+str(E_radial_array[i]))
+            #print("E_value"+" index: "+str(i))
+    #E_radial_array.append(Ex1x1_array[len(Ex1x1_array)-1])
+
+    omega_1 = []
+
+    for i in range(len(r_array)-1):
+        print("r: "+str(r_array[i])+ "      E: "+str(E_radial_array[i])+ "      index: " + str(i))
+        omega_1_section = -E_radial_array[i] * r_array[i]*Mom_Array/H33_c
+        omega_1.append(omega_1_section)
+    
+    #return (omega_1,r_array)
+
+
+    
+    
+
+
+
+
 
 def symmetric_layup(layupArray):
     #I don't think this differentiates between the layups that have an
@@ -220,7 +264,7 @@ for Q in Q_bars:
     print(S_bar)
     E_x1x1.append(1/(S_bar[0,0]))
 #print("S_bar should be inverse of Q_bar")
-#print("Ex1x1: "+str(E_x1x1) + " GPa")
+print("Ex1x1: "+str(E_x1x1) + " GPa")
 
 H_33c = bendingStiffness(E_x1x1,D_inner/2,D_outer/2,len(black_Aluminum.fullLayupArray)) #check units here
 print(H_33c)
@@ -236,10 +280,14 @@ c_3 = -((1/2)*(Lift*math.cos(alpha)-W_rocket)*l_rocket**2 + W_rocket*D_outer*l_r
 #Integrate Moment Equation Twice
 c_4= -((1/6)*(Lift*math.cos(alpha))*l_rocket**3 + (1/2)*W_rocket*D_outer*l_rocket**2 + c_3*l_rocket)
 
-print(x_1)
+#plug into displacement
 u2_x1 = (1/((10**3)*H_33c))*((1/6)*(Lift*math.cos(alpha)*(x_1)**3)+(1/2)*(W_rocket)*(D_outer)*(x_1)**2+c_3*x_1+c_4) #micrometers
 
-print(u2_x1)
+
+
+#Axial bending stress
+
+Axial_Stress_From_Bending(c_4,E_x1x1,H_33c,D_inner/2,D_outer/2,8)
 
 plt.figure(figsize=(16,9))
 plt.title("Vertical Displacement of Beam")
