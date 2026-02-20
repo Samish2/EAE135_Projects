@@ -311,6 +311,8 @@ c_omega_axial_C = -184 * ksi_to_MPa / 1000 #GPa
 c_omega_transverse_T = 53.4/1000 #GPa
 c_omega_transverse_C = -24.4 * ksi_to_MPa/1000 #GPa
 
+omega_HTPB = 0.629 / 1000 #GPa
+
 E_HTPB = 9.036 * 10**(-3) # GPa
 
 carbon_epoxy=Material(c_rho,c_E1,c_E2,c_v_12,c_v_23,c_G_12,c_G_23,
@@ -320,13 +322,14 @@ carbon_epoxy=Material(c_rho,c_E1,c_E2,c_v_12,c_v_23,c_G_12,c_G_23,
 layup = [0,45,-45,90]
 numLayers = 8
 
+compressive_strengths = [omega_HTPB,c_omega_axial_C,c_omega_transverse_C,c_omega_transverse_C,c_omega_transverse_C,
+                         c_omega_transverse_C,c_omega_transverse_C,c_omega_transverse_C,c_omega_axial_C]
 
-
-#symmetric_layup(layup)
+tensile_strengths = [omega_HTPB,c_omega_axial_T,c_omega_transverse_T,c_omega_transverse_T,c_omega_transverse_T,
+                         c_omega_transverse_T,c_omega_transverse_T,c_omega_transverse_T,c_omega_axial_T]
 
 black_Aluminum=laminate(carbon_epoxy,layup)
 black_Aluminum.Q_Matrix()
-#orientation_Transform(45)
 black_Aluminum.Q_bar(45)
 
 Q_bars=[]
@@ -388,6 +391,12 @@ omega_1_axial_radial = layer_values_to_radius(omega_1_axial_layer,D_outer/2,D_in
 for i in omega_1_axial_layer:
     print (i)
 
+c_strengths = layer_values_to_radius(compressive_strengths,D_outer/2,D_inner/2,numLayers,1)
+t_strengths = layer_values_to_radius(tensile_strengths,D_outer/2,D_inner/2,numLayers,1)
+# print("compressive strengths list:")
+# for g in c_strengths:
+#     print(g)
+
 
 #Axial bending stress in GPa
 (omega_1_bend, r_array,layer_array) = Axial_Stress_From_Bending(Mom_Array,E_x1x1,H_33c,D_inner/2,D_outer/2,numLayers)
@@ -399,7 +408,14 @@ omega_1_total = omega_1_axial_radial + omega_1_bend
 
 fig, ax1 = plt.subplots()
 
-
+strengths_array = []
+for i in range(len(r_array)-1):
+    if (r_array[i]<=0):
+        strengths_array.append(t_strengths[i])
+    else:
+        strengths_array.append(c_strengths[i])
+strengths_array.append(c_strengths[len(c_strengths)-1])
+print("r_array length: "+str(len(r_array))+ "   strengths array length: " + str(len(strengths_array)))
 
 color = 'tab:blue'
 #plt.figure(figsize=(16,9))
@@ -423,6 +439,8 @@ plt.title("Total Axial Stress versus radius at Critical Cross Section")
 plt.xlabel("Axial Stress (GPa)")
 plt.ylabel("radius (m)")
 plt.plot(omega_1_total,r_array)
+plt.plot(strengths_array,r_array)
+plt.ylim(-0.64,0.64)
 plt.grid()
 plt.show()
 
@@ -430,7 +448,7 @@ plt.figure(figsize=(16,9))
 plt.title("Axial Stress versus radius at Critical Cross Section (Zoomed)")
 plt.xlabel("Axial Stress (GPa)")
 plt.ylabel("radius (m)")
-plt.ylim(0.5,0.65)
+plt.ylim(0.5,0.64)
 plt.plot(omega_1_total,r_array)
 plt.grid()
 plt.show()
